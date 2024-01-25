@@ -1,3 +1,5 @@
-requests
+requests~=2.31.0
 pytest
 allure-pytest
+jsonschema~=4.21.1
+pydantic~=2.5.3
