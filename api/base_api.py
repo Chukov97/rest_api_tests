@@ -1,5 +1,6 @@
 import allure
 import requests
+from jsonschema import validate
 
 
 class Api:
@@ -30,7 +31,8 @@ class Api:
         with allure.step(f"GET запрос на url: {url}{endpoint}"):
             self.response = requests.get(url=f"{url}{endpoint}",
                                          headers=headers,
-                                         params=params)
+                                         params=params,
+                                         timeout=self._TIMEOUT)
 
         return self
 
@@ -63,3 +65,32 @@ class Api:
         assert expected_code == actual_code, f"\nОжидаемый результат: {expected_code} " \
                                              f"\nФактический результат: {actual_code}"
         return self
+
+    @allure.step("ОР: Cхема ответа json валидна")
+    def json_schema_should_be_valid(self, json_schema):
+        """Проверяем полученный ответ на соответствие json схеме"""
+        # json_schema = load_json_schema(path_json_schema, name_json_schema)
+        validate(self.response.json(), json_schema)
+        return self
+
+    @allure.step("ОР: В поле ответа содержится искомое значение")
+    def have_value_in_response_parameter(self, parameter_name: str, expected_value: str):
+
+        api_data = self.response.json()
+        actual_value = self.find_value_from_nested_dict(api_data, parameter_name)
+
+        assert actual_value == expected_value, f"\nОжидаемый результат: {expected_value} " \
+                                               f"\nФактический результат: {actual_value}"
+
+    def find_value_from_nested_dict(self, dictionary, parameter_name):
+        if parameter_name in dictionary:
+            return dictionary[parameter_name]
+
+        for value in dictionary.values():
+            if isinstance(value, dict):
+                nested_value = self.find_value_from_nested_dict(value, parameter_name)
+
+                if nested_value is not None:
+                    return nested_value
+
+        return f'Параметр не найден'
